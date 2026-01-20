@@ -1,0 +1,7 @@
+{
+  "name": "youtube-video-thumbnail-downloader",
+  "pages_build_config": {
+    "build_command": "",
+    "destination_dir": "./"
+  }
+}
