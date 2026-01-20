@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Thumbnail Downloader</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .thumbnail-card {
+      transition: all 0.3s ease;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen gradient-bg">
+  <div class="container mx-auto px-4 py-12">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-6">
+        <i class="fab fa-youtube text-red-600 text-4xl"></i>
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">YouTube Thumbnail Downloader</h1>
+      <p class="text-white/80 text-lg max-w-xl mx-auto">Get high-quality thumbnails from any YouTube video instantly.
+        Just paste the video URL below.</p>
+    </div>
+
+    <!-- Input Section -->
+    <div class="max-w-3xl mx-auto mb-12">
+      <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+        <div class="flex flex-col md:flex-row gap-4">
+          <div class="flex-1 relative">
+            <i class="fas fa-link absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="urlInput" placeholder="Paste YouTube video URL here..."
+              class="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none text-gray-700 text-lg transition-colors">
+          </div>
+          <button onclick="fetchThumbnails()"
+            class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 hover:shadow-lg flex items-center justify-center gap-2">
+            <i class="fas fa-download"></i>
+            <span>Get Thumbnails</span>
+          </button>
+        </div>
+        <div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl">
+          <i class="fas fa-exclamation-circle mr-2"></i>
+          <span id="errorText"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thumbnails Grid -->
+    <div id="thumbnailsContainer" class="hidden max-w-6xl mx-auto">
+      <h2 class="text-2xl font-bold text-white mb-6 text-center">
+        <i class="fas fa-images mr-2"></i>Available Thumbnails
+      </h2>
+      <div id="thumbnailsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Thumbnails will be inserted here -->
+      </div>
+    </div>
+
+    <!-- How to Use Section -->
+    <div class="max-w-4xl mx-auto mt-16">
+      <div class="bg-white/10 backdrop-blur rounded-2xl p-8">
+        <h3 class="text-xl font-bold text-white mb-6 text-center">
+          <i class="fas fa-question-circle mr-2"></i>How to Use
+        </h3>
+        <div class="grid md:grid-cols-3 gap-6 text-center">
+          <div class="text-white">
+            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span class="text-xl font-bold">1</span>
+            </div>
+            <h4 class="font-semibold mb-2">Copy URL</h4>
+            <p class="text-white/70 text-sm">Copy the YouTube video URL from your browser</p>
+          </div>
+          <div class="text-white">
+            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span class="text-xl font-bold">2</span>
+            </div>
+            <h4 class="font-semibold mb-2">Paste & Click</h4>
+            <p class="text-white/70 text-sm">Paste it above and click "Get Thumbnails"</p>
+          </div>
+          <div class="text-white">
+            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span class="text-xl font-bold">3</span>
+            </div>
+            <h4 class="font-semibold mb-2">Download</h4>
+            <p class="text-white/70 text-sm">Choose your preferred resolution and download</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const thumbnailQualities = [
+      { name: 'Max Resolution', key: 'maxresdefault', resolution: '1280×720', badge: 'HD' },
+      { name: 'Standard Definition', key: 'sddefault', resolution: '640×480', badge: 'SD' },
+      { name: 'High Quality', key: 'hqdefault', resolution: '480×360', badge: 'HQ' },
+      { name: 'Medium Quality', key: 'mqdefault', resolution: '320×180', badge: 'MQ' },
+      { name: 'Default', key: 'default', resolution: '120×90', badge: 'SM' },
+    ];
+
+    function extractVideoId(url) {
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+        /^([a-zA-Z0-9_-]{11})$/
+      ];
+
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+      }
+      return null;
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      const errorText = document.getElementById('errorText');
+      errorText.textContent = message;
+      errorDiv.classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('errorMessage').classList.add('hidden');
+    }
+
+    function fetchThumbnails() {
+      hideError();
+      const url = document.getElementById('urlInput').value.trim();
+
+      if (!url) {
+        showError('Please enter a YouTube video URL');
+        return;
+      }
+
+      const videoId = extractVideoId(url);
+
+      if (!videoId) {
+        showError('Invalid YouTube URL. Please check and try again.');
+        return;
+      }
+
+      displayThumbnails(videoId);
+    }
+
+    function displayThumbnails(videoId) {
+      const container = document.getElementById('thumbnailsContainer');
+      const grid = document.getElementById('thumbnailsGrid');
+
+      grid.innerHTML = '';
+
+      thumbnailQualities.forEach((quality, index) => {
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality.key}.jpg`;
+
+        const card = document.createElement('div');
+        card.className = 'thumbnail-card card-hover bg-white rounded-2xl overflow-hidden shadow-xl';
+        card.innerHTML = `
+                    <div class="relative">
+                        <img 
+                            src="${thumbnailUrl}" 
+                            alt="${quality.name} thumbnail"
+                            class="w-full h-48 object-cover bg-gray-100"
+                            onerror="this.parentElement.parentElement.style.opacity='0.5'; this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-48 bg-gray-200 text-gray-400\\'><i class=\\'fas fa-image-slash text-3xl\\'></i></div>'"
+                        >
+                        <span class="absolute top-3 right-3 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
+                            ${quality.badge}
+                        </span>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-bold text-gray-800">${quality.name}</h3>
+                            <span class="text-sm text-gray-500">${quality.resolution}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <a 
+                                href="${thumbnailUrl}" 
+                                target="_blank"
+                                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg transition-colors text-center text-sm"
+                            >
+                                <i class="fas fa-external-link-alt mr-1"></i> View
+                            </a>
+                            <button 
+                                onclick="downloadImage('${thumbnailUrl}', '${videoId}_${quality.key}.jpg')"
+                                class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
+                            >
+                                <i class="fas fa-download mr-1"></i> Download
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+        grid.appendChild(card);
+      });
+
+      container.classList.remove('hidden');
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function downloadImage(url, filename) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        // Fallback: open in new tab
+        window.open(url, '_blank');
+      }
+    }
+
+    // Allow Enter key to trigger search
+    document.getElementById('urlInput').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        fetchThumbnails();
+      }
+    });
+  </script>
+</body>
+
+</html>
