@@ -1,7 +1,12 @@
 {
   "name": "youtube-video-thumbnail-downloader",
   "pages_build_config": {
+    "compatibility_date": "2026-01-20",
+    "main": "index.html",
     "build_command": "",
     "destination_dir": "./"
+  },
+  "assets": {
+    "directory": "./assets"
   }
 }
